@@ -1,0 +1,55 @@
+Name     DMABoard;
+Date     feb 2012;
+Revision 3;
+Designer dmlloyd;
+Device   GAL22V10;
+
+/** Inputs **/
+
+pin  1 = phi1in;
+pin  5 = phi0in;
+pin  6 = !ML;
+pin  7 = !haltin;
+pin  9 = rwin;
+pin 11 = !dmain;
+pin 14 = VDA;
+pin 16 = VPA;
+
+/** Outputs **/
+
+pin 13 = !pbihalt; /* to PBI device */
+pin 17 = !haltout; /* to SALLY CPU */
+pin 19 = rwout;   /* to system */
+pin 20 = !beout;   /* to 65Cxx CPUs */
+pin 21 = phi0out; /* to 65Cxx CPUs */
+pin 22 = phi1out; /* to system and phi1in */
+pin 23 = phi2out; /* to system */
+
+pin 14 = Q1;
+pin 16 = Q2;
+
+/** Equations **/
+
+/* buffered phi2 signal */
+phi2out = ! phi1in;
+phi1out = ! phi0in;
+
+
+Q1.D = haltin;
+/* do not stop during ML cycles or non-bus cycles */
+Q2.D = dmain & !ML & !haltin & (VDA | VPA);
+/* sally uses HALT directly */
+haltout = dmain # haltin;
+/* buffered ANTIC HALT to PBI */
+pbihalt = haltin;
+/* stop C02/C816 during halt cycles */
+phi0out = phi0in & !(Q1 # Q2);
+beout = Q1 # Q2 # (!VDA & !VPA);
+/* force read during HALT and idle cycles */
+rwout = haltout # rwin # (! VDA & ! VPA);
+/* disable r/w output during PBI DMA cycles */
+rwout.OE = Q2 # (! VDA & ! VPA);
+/* hide our internal signals */
+Q1.OE = b'0';
+Q2.OE = b'0';
+

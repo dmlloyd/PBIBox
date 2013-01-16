@@ -1,0 +1,35 @@
+
+#PINLOCK_BEGIN
+
+#Sun Mar 11 13:05:26 2012
+
+NET "Addr<0>"        LOC =  "S:PIN1";
+NET "Addr<1>"        LOC =  "S:PIN44";
+NET "Addr<2>"        LOC =  "S:PIN43";
+NET "Addr<3>"        LOC =  "S:PIN42";
+NET "Addr<4>"        LOC =  "S:PIN41";
+NET "Addr<5>"        LOC =  "S:PIN40";
+NET "Addr<6>"        LOC =  "S:PIN39";
+NET "Addr<7>"        LOC =  "S:PIN38";
+NET "Addr<8>"        LOC =  "S:PIN37";
+NET "Addr<9>"        LOC =  "S:PIN36";
+NET "Addr<10>"       LOC =  "S:PIN34";
+NET "Addr<11>"       LOC =  "S:PIN32";
+NET "Addr<12>"       LOC =  "S:PIN33";
+NET "Addr<13>"       LOC =  "S:PIN30";
+NET "Addr<14>"       LOC =  "S:PIN31";
+NET "Addr<15>"       LOC =  "S:PIN29";
+
+NET "DMA_in"         LOC =  "S:PIN27";
+NET "EXTCPU"         LOC =  "S:PIN22";
+NET "EXTMEM"         LOC =  "S:PIN23";
+NET "EXTSEL_in"      LOC =  "S:PIN2";
+
+NET "D1FF"           LOC =  "S:PIN20";
+NET "D1XX"           LOC =  "S:PIN21";
+NET "D6XX"           LOC =  "S:PIN18";
+NET "D8XX"           LOC =  "S:PIN19";
+
+NET "EXTSEL_out"     LOC =  "S:PIN3";
+NET "DMA_out"        LOC =  "S:PIN28";
+#PINLOCK_END
