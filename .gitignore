@@ -1,0 +1,7 @@
+*.gise
+EtherPBI_summary.html
+_xmsgs/
+*~
+*.o
+*.obj
+*.map
