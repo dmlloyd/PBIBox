@@ -5,3 +5,5 @@ _xmsgs/
 *.o
 *.obj
 *.map
+*.lst
+*-

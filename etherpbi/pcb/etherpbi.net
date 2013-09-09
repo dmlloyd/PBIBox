@@ -1,0 +1,134 @@
+# J1 = Atari PBI connector
+# J2 = Power header
+# U1 = W5300
+# U2 = XC95144XL CPLD
+# U3 = SRAM - R1LV5256ESA or similar
+# U4 = Flash ROM -
+# U5 = Config EEPROM - AT24MAC602-SSHM-TCT-ND
+
+# J2 pinout:
+#            EXTSEL = 1    2 = GND
+#                A1 = 3    4 = A0
+#                A3 = 5    6 = A2
+#                A5 = 7    8 = A4
+#               GND = 9   10 = A6
+#                A8 = 11  12 = A7
+#               A10 = 13  14 = A9
+#               A12 = 15  16 = A11
+#               A14 = 17  18 = A13
+#               A15 = 19  20 = GND
+#                D1 = 21  22 = D0
+#                D3 = 23  24 = D2
+#                D5 = 25  26 = D4
+#                D7 = 27  28 = D6
+#               GND = 29  30 = GND
+#               GND = 31  32 = PHI2
+#             RESET = 33  34 = future
+#               RDY = 35  36 = IRQ
+#            *EXTEN = 37  38 = HALT**
+#               REF = 39  40 = DMA**
+#               GND = 41  42 = future (was CAS)
+#  (was RAS) future = 43  44 = MPD
+#               R/W = 45  46 = GND
+#              VCC5 = 47  48 = VCC5
+#               GND = 49  50 = AUDIO
+
+# * Not on XE without mod
+# ** Requires DMA Board
+
+# The following may only be asserted when device is selected:
+#    EXTSEL  DMA  MPD
+#
+# The following may only be asserted by one device at a time:
+#    EXTCPU  EXTMEM
+
+# J3 pinout:
+#            VCC33 = 13   1 = VCC33
+#            VCC33 = 14   2 = VCC12N
+#              GND = 15   3 = GND
+#           POWBTN = 16   4 = VCC5b
+#              GND = 17   5 = GND
+#              GND = 18   6 = VCC5b
+#              GND = 19   7 = GND
+#            VCC5N = 20   8 = PWR_OK
+#            VCC5a = 21   9 = VCC5SB
+#            VCC5a = 22  10 = VCC12
+#
+
+# Data bus
+D0 J1-22 J2-22
+D1 J1-21 J2-21
+D2 J1-24 J2-24
+D3 J1-23 J2-23
+D4 J1-26 J2-26
+D5 J1-25 J2-25
+D6 J1-28 J2-28
+D7 J1-27 J2-27
+
+# Address bus
+A0      J1-4 J2-4 U1-1
+A1      J1-3 J2-3 U1-44
+A2      J1-6 J2-6 U1-43
+A3      J1-5 J2-5 U1-42
+A4      J1-8 J2-8 U1-41
+A5      J1-7 J2-7 U1-40
+A6      J1-10 J2-10 U1-39
+A7      J1-12 J2-12 U1-38
+A8      J1-11 J2-11 U1-37
+A9      J1-14 J2-14 U1-36
+A10     J1-13 J2-13 U1-34
+A11     J1-16 J2-16 U1-32
+A12     J1-15 J2-15 U1-33
+A13     J1-18 J2-18 U1-30
+A14     J1-17 J2-17 U1-31
+A15     J1-19 J2-19 U1-29
+
+# System
+RDWR    J1-45 J2-45
+IRQ     J1-36 J2-36
+RESET   J1-33 J2-33
+RDY     J1-35 J2-35
+PHI2    J1-32 J2-32
+
+# PBI
+EXTEN   J1-37 J2-37
+MPD     J1-44 J2-44
+AUDIO   J1-50 J2-50
+REF     J1-39 J2-39
+HALT    J1-38 J2-38
+
+# PBI to Atari
+EXTSEL_out  J1-1    U1-3
+DMA_out     J1-40   U1-28
+
+# PBI to PBIBox bus
+EXTSEL_in   J2-1    U1-2  RN1-9
+DMA_in      J2-40   U1-27 RN1-8
+EXTCPU      J2-51   U1-22 RN1-6
+EXTMEM      J2-52   U1-23 RN1-7
+
+# PBI Ext
+D1FF        J2-53   U1-20 RN1-4
+D1XX        J2-54   U1-21 RN1-5
+D6XX        J2-55   U1-18 RN1-2
+D8XX        J2-56   U1-19 RN1-3
+
+# JTAG
+TMS     U1-10 J5-4
+TCK     U1-11 J5-6
+TDO     U1-24 J5-8
+TDI     U1-9  J5-10
+
+# Power
+VCC5    J3-9 J3-21 J3-22 J2-47 J2-48 J3-4 J3-6 VP-1 RN1-1
+VCC33   J3-1 J3-13 J3-14 J2-57 J2-58 J2-60 U1-15 U1-35 U1-26 J5-2 C1-1
+VCC12   J3-10 J2-63 J2-64
+VCCN12  J3-2 J2-59
+GND     J3-3 J3-5 J3-7 J3-15 J3-17 J3-18 J3-19 \
+    J1-49 J2-49 J1-46 J2-46 J1-41 J2-41 J1-31 J2-31 J1-30 J2-30 \
+    J1-29 J2-29 J1-20 J2-20 J1-9 J2-9 J1-2 J2-2 J2-62 J4-2 \
+    U1-4 U1-17 U1-25 VG-1 \
+    J5-3 J5-5 J5-7 J5-9 J5-11 J5-13
+POWBTN  J4-1 J3-16
+VCC5SB  J3-9 J2-61
+

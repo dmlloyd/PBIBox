@@ -1,159 +1,626 @@
-    ;;
-    ;; Copyright (C) 2013, David M. Lloyd
-    ;;
-    ;; This file is part of the PBIBox suite.
-    ;;
-    ;; PBIBox is free software: you can redistribute it and/or modify
-    ;; it under the terms of the GNU General Public License as published by
-    ;; the Free Software Foundation, either version 3 of the License, or
-    ;; (at your option) any later version.
-    ;;
-    ;; PBIBox is distributed in the hope that it will be useful,
-    ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-    ;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    ;; GNU General Public License for more details.
-    ;;
-    ;; You should have received a copy of the GNU General Public License
-    ;; along with PBIBox.  If not, see <http://www.gnu.org/licenses/>.
-    ;;
+;;
+;; Copyright (C) 2013, David M. Lloyd
+;;
+;; This file is part of the PBIBox suite.
+;;
+;; PBIBox is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+;;
+;; PBIBox is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with PBIBox.  If not, see <http://www.gnu.org/licenses/>.
+;;
 
-    ;
-    ; EtherPBI Hardware Description
-    ;
+;
+; EtherPBI Hardware Description
+;
 
-    ;; Memory map:
-    ;; D100-D1FF (256 bytes): I/O area
-    ;;    D100-D17F: Firmware bank 1 select. 1K window, up to 128 banks.
-    ;;    D180-D1BF: W5300 access area, 64 bytes
-    ;;    D1C0-D1CF: W5300 uses 1K (10 bit) address space, mapped in 16 64-byte (6-bit) pieces.
-    ;;        Read/write D1C0 to select bank 0, D1C1 to select bank 1 etc.
-    ;;    D1D0-D1D3: Settings bank select
-    ;;    D1D4-D1DF: RAM bank select
-    ;;    D1E0-D1FE: Unused
-    ;;    D1FF: PBI select/interrupt register
-    ;; RAM: 8kB SRAM
-    ;;    D600-D6FF (256 bytes): Settings bank
-    ;;    D700-D7FF (256 bytes): RAM bank
-    ;; FLASH memory: CAT28F512 or equivalent
-    ;;    D800-DBFF (1024 bytes): PBP Program memory bank 0 (fixed)
-    ;;    DC00-DFFF (1024 bytes): PBP Program memory bank 1 (selectable)
-
-    ;; NVRAM map
-    ;;
-    ;; 00000-003FF: Firmware Bank 0
-    ;; 00400-007FF: Firmware Bank 1
-
-    ;; 00800-00FFF: Firmware Bank 1
-    ;; 01000-017FF: Firmware Bank 2
-    ;; 01800-01FFF: Firmware Bank 3
-    ;; 02000-027FF: Firmware Bank 4
-    ;; 02800-02FFF: Firmware Bank 5
-    ;; 03000-037FF: Firmware Bank 6
-    ;; 03800-03FFF: Firmware Bank 7
-    ;; 04000-047FF: Firmware Bank 8
-    ;; 04800-04FFF: Firmware Bank 9
-    ;; 05000-057FF: Firmware Bank 10
-    ;; 05800-05FFF: Firmware Bank 11
-    ;; 06000-067FF: Firmware Bank 12
-    ;; 06800-06FFF: Firmware Bank 13
-    ;; 07000-077FF: Firmware Bank 14
-    ;; 07800-07FFF: Firmware Bank 15
-    ;; 08000-087FF: Firmware Bank 16
-    ;; 08800-08FFF: Firmware Bank 17
-    ;; 09000-097FF: Firmware Bank 18
-    ;; 09800-09FFF: Firmware Bank 19
-    ;; 0A000-0A7FF: Firmware Bank 20
-    ;; 0A800-0AFFF: Firmware Bank 21
-    ;; 0B000-0B7FF: Firmware Bank 22
-    ;; 0B800-0BFFF: Firmware Bank 23
-    ;; 0C000-0C7FF: Firmware Bank 24
-    ;; 0C800-0CFFF: Firmware Bank 25
-    ;; 0D000-0D7FF: Firmware Bank 26
-    ;; 0D800-0DFFF: Firmware Bank 27
-    ;; 0E000-0E7FF: Firmware Bank 28
-    ;; 0E800-0EFFF: Firmware Bank 29
-    ;; 0F000-0F0FF: Settings Bank 0
-    ;; 0F100-0F1FF: Settings Bank 1
-    ;; 0F200-0F2FF: Settings Bank 2
-    ;; 0F300-0F3FF: Settings Bank 3
-    ;; 0F400-0F4FF: RAM Bank 0
-    ;; 0F500-0F5FF: RAM Bank 1
-    ;; 0F600-0F6FF: RAM Bank 2
-    ;; 0F700-0F7FF: RAM Bank 3
-    ;; 0F800-0F8FF: RAM Bank 4
-    ;; 0F900-0F9FF: RAM Bank 5
-    ;; 0FA00-0FAFF: RAM Bank 6
-    ;; 0FB00-0FBFF: RAM Bank 7
-    ;; 0FC00-0FCFF: RAM Bank 8
-    ;; 0FD00-0FDFF: RAM Bank 9
-    ;; 0FE00-0FEFF: RAM Bank 10
-    ;; 0FF00-0FFFF: RAM Bank 11
-
-    ; W5300 register access area
-    W5300_BASE      = $D180
-
-    ; Program bank 1 select
-    PROG_BANK       = $D100
-
-    CIO_BANK        = PROG_BANK + 0
-    CIO_TCP_BANK    = CIO_BANK + 0
-    CIO_UDP_BANK    = CIO_BANK + 1
-    CIO_RAWIP_BANK  = CIO_BANK + 2
-    CIO_RS232_BANK  = CIO_BANK + 3
-    CIO_CIOTCP_BANK = CIO_BANK + 4
-
-    SIO_BANK        = PROG_BANK + 8
-    SIO_SIOUDP_BANK = SIO_BANK + 0
-    SIO_SIOMAP_BANK = SIO_BANK + 1
-
-    ; W5300 bank select - 16 bytes
-    W5300_BANK      = $D1C0
-
-    ; RAM bank select
-    RAM_BANK        = $D1E0
-
-    ; PBI Control/Interrupt
-    PBI_REG         = $D1FF
-
-    RAM_LO          = $D500
-    RAM_HI          = $D600
-
-    ROM_LO          = $D800
-    ROM_HI          = $DC00
+;; Memory map:
+;; D100-D1FF (256 bytes): I/O area
+;;    D100-D17F: Firmware ROM high bank select. 1K window, up to 128 banks.
+;;    D180-D1BF: W5300 access area, 64 bytes
+;;    D1C0-D1CF: W5300 uses 1K (10 bit) address space, mapped in 16 64-byte (6-bit) pieces.
+;;        Read/write D1C0 to select bank 0, D1C1 to select bank 1 etc.
+;;    D1D0-D1DF: SPI access registers
+;;        D1D0:
+;;    D1E0-D1FE: RAM high bank select, 256 byte window, up to 31 banks.
+;;    D1FF: PBI select/interrupt register
+;; D600-D6FF (256 bytes): RAM low bank (fixed = bank 1F)
+;; D700-D7FF (256 bytes): RAM high bank (selectable)
+;;
+;; FLASH ROM area: CAT28F512 or equivalent
+;;    D800-DBFF (1024 bytes): PBP Program memory bank 0 (fixed)
+;;    DC00-DFFF (1024 bytes): PBP Program memory bank 1 (selectable)
 
 
-    ;;
-    ;; Bank 0 entry points
-    ;;
-    .global CIO_OPEN
-    .global CIO_CLOSE
-    .global CIO_READ
-    .global CIO_WRITE
-    .global CIO_STATUS
-    .global CIO_SPECIAL
+;;;
+;;; I/O
+;;;
 
-    ;;
-    ;; Bank N entry points
-    ;;
-    OPENV           = $DC00
-    CLOSEV          = $DC03
-    READV           = $DC06
-    WRITEV          = $DC09
-    STATUSV         = $DC0C
-    SPECIALV        = $DC0F
+;;
+;; Config memory definitions
 
-    ;; CIO data
+.scope CONFIG
+    BASE            = $80
 
-    ; Map of CIO device name to handler #.
-    ; Key is any char from 'A' ($40) through 'z' ($7A) (58 bytes).
-    CIO_MAP         = RAM_HI
-    CIO_PARAM1      = RAM_HI + 64
-    CIO_PARAM2      = RAM_HI + 128
-    CIO_PARAM3      = RAM_HI + 192
-    CIO_PARAM4      = RAM_HI + 256
-    CIO_PARAM5      = RAM_HI + 320
-    CIO_PARAM6      = RAM_HI + 384
-    CIO_PARAM7      = RAM_HI + 448
+    ; IP address mode
+    ;   bit 0: Use DHCP for IP assignment
+    ;   bit 1: Use DHCP for DNS addresses (ignored if bit 0 is clear)
+    ;   bit 2-7: reserved
+    IPMODE          = BASE + $00
+    ; Configured IP address
+    IPADDR          = BASE + $01
+    IPADDR_LEN      = 4
+    ; Configured IP netmask length
+    IPADDR_BITS     = BASE + $05
+    ; Configured DNS host
+    DNS             = BASE + $06
+    DNS_LEN         = 4
+    ; Configured default router
+    IPGW            = BASE + $0A
+    IPGW_LEN        = 4
+
+    ; FIRST_FREE    = BASE + $0E
+
+    ; LAST          = BASE + $7F
+.endscope ; CONFIG
+
+;;
+;; W5300 definitions
+;;
+
+.scope W5300
+    BASE            = $D180
+
+    .scope BANK
+        ; Common bank
+        COMMON0     = $D1C0
+        ; PPP and other config bank
+        COMMON1     = $D1C1
+        ; Socket banks (4..12, add socket number to W5300::BANK::SOCK)
+        SOCK        = $D1C4
+    .endscope
+
+    .scope REG
+        .scope COM0
+            ; Bank 0: Common regs (first half)
+
+            ; Mode register 0
+            ;   Bit 7: Data bus width (0 = 8-bit)
+            ;   Bit 6: MAC layer pause frame (0 = normal, 1 = pause)
+            ;   Bit 3-5: Write data fetch time (NxPLL_CLK, default 111)
+            ;   Bit 2: Read data hold time (0 = none, 1 = 2xPLL_CLK, default 0)
+            ;   Bit 1: reserved (set 0)
+            ;   Bit 0: FIFO swap (0 = big-endian FIFO, 1 = little-endian FIFO)
+            MR0         = BASE
+
+            .scope MR0
+                DBW     = 7
+                MPF     = 6
+                WDF     = 3
+                RDH     = 2
+                FS      = 0
+            .endscope ; MR0
+
+            ; Mode register 1
+            ;   Bit 7: Software reset (1 = reset)
+            ;   Bit 6: reserved (set 0)
+            ;   Bit 5: Memory test (1 = enable; leave 0)
+            ;   Bit 4: Ping block (0 = reply to ping when ICMP sock is not open; 1 = do not reply)
+            ;   Bit 3: PPPoE enable (leave 0)
+            ;   Bit 2: Data bus swap (1 = swapped data bus)
+            ;   Bit 1: reserved (set 0)
+            ;   Bit 0: Indirect bus mode (1 = indirect bus; set 0)
+            MR1         = BASE + 1
+
+            .scope MR1
+                RST     = 7
+                MT      = 5
+                PB      = 4
+                PPPoE   = 3
+                DBS     = 2
+                IND     = 0
+            .endscope ; MR1
+
+            ; Interrupt register 0 (Write a 1 to clear the corresponding interrupt, read for status)
+            ;   Bit 7: 1 = IP conflict detect
+            ;   Bit 6: 1 = Port unreachable (see UIPR, UPORTR)
+            ;   Bit 5: 1 = PPPoE terminated
+            ;   Bit 4: 1 = ICMP Fragment MTU packet received (see FMTUR)
+            ;   Bit 0-3: reserved (0)
+            IR0         = BASE + 2
+
+            .scope IR0
+                IPCF    = 7
+                DPUR    = 6
+                PPPT    = 5
+                FMTU    = 4
+            .endscope ; IR0
+
+            ; Interrupt register 1 (Write a 1 to clear the corresponding interrupt, read for status)
+            ;   Bits 0-7: Interrupt on socket N where N = bit #
+            IR1         = BASE + 3
+
+            ; Interrupt mask register 0 (R/W, write 1 to enable, 0 to disable)
+            ;   Bit 7: 1 = IP conflict detect
+            ;   Bit 6: 1 = Port unreachable (see UIPR, UPORTR)
+            ;   Bit 5: 1 = PPPoE terminated
+            ;   Bit 4: 1 = ICMP Fragment MTU packet received (see FMTUR)
+            ;   Bit 0-3: reserved (0)
+            IMR0        = BASE + 4
+
+            .scope IMR0
+                IPCF    = 7
+                DPUR    = 6
+                PPPT    = 5
+                FMTU    = 4
+            .endscope ; IMR0
+
+            ; Interrupt mask register 1 (R/W, write 1 to enable, 0 to disable)
+            ;   Bits 0-7: Interrupt on socket N where N = bit #
+            IMR1        = BASE + 5
+
+            ; Source hardware address, network order, 6 bytes
+            SHAR        = BASE + 8
+            SHAR_LEN    = 6
+
+            ; Gateway (default route next hop) address, network order, 4 bytes
+            GAR         = BASE + $10
+            GAR_LEN     = 4
+
+            ; Subnet mask register, network order, 4 bytes
+            SUBR        = BASE + $14
+            SUBR_LEN    = 4
+
+            ; Source IP address register, network order, 4 bytes
+            SIPR        = BASE + $18
+            SIPR_LEN    = 4
+
+            ; Retransmit timeout register; units of 100us, MSB first (big-endian), 2 bytes
+            RTR         = BASE + $1C
+            RTR_LEN     = 2
+
+            ; Retransmit retry count register, 1 byte
+            RCR         = BASE + $1F
+            RCR_LEN     = 1
+
+            ; !! Sum of all transmit/receive memory reg should be 128 !!
+            ; Transmit memory size register, socket 0-7, one byte per socket, units of 1KB
+            TMSR        = BASE + $20
+            TMSR_LEN    = 8
+
+            ; Receive memory size register, socket 0-7, one byte per socket, units of 1KB
+            RMSR        = BASE + $28
+            RMSR_LEN    = 8
+
+            ; Memory type register; sets type of each of the 16 8KB memory blocks; 2 bytes
+            ;   Bits 0-7 configure blocks 8-15
+            ;   Bits 8-15 configure blocks 0-7
+            ;   Bit X = 0 for receive, 1 for transmit
+            MTYPER      = BASE + $30
+            MTYPER_LEN  = 2
+
+            ; PPPoE authentication register; 2 bytes
+            PATR        = BASE + $32
+            PATR_LEN    = 2
+
+            ; PPP LCP request timer register; 1 byte
+            PTIMER      = BASE + $37
+
+            ; PPP LCP magic number register; 1 byte
+            PMAGICR     = BASE + $39
+
+            ; PPP Session ID register; 2 bytes
+            PSIDR       = BASE + $3C
+            PSIDR_LEN   = 2
+
+        .endscope ; COM0
+
+        .scope COM1
+            ; Bank 1: Common regs (second half)
+
+            ; PPP Destination hardware address register; network order, 6 bytes
+            PDHAR       = BASE
+            PDHAR_LEN   = 6
+
+            ; Unreachable IP address register, set when IR(dest port unreachable) or IR(fragment MTU) is set
+            UIPR        = BASE + 8
+            UIPR_LEN    = 4
+
+            ; Unreachable TCP port register, set when IR(dest port unreachable) is set
+            UPORTR      = BASE + $0C
+            UPORTR_LEN  = 2
+
+            ; Fragment MTU register, set when IR(fragment MTU) is set; copy value to SOCK::MSSR to proceed; network order, 2 bytes
+            FMTUR       = BASE + $0E
+            FMTUR_LEN   = 2
+
+        .endscope ; COM1
+
+        .scope SOCK
+            ; Mode register 0
+            ;   Bit 7: Align TCP (set to 0 to disable)
+            ;   Bit 0-6: reserved (set 0)
+            MR0         = BASE
+
+            .scope MR0
+                ALIGN   = 7
+            .endscope ; MR0
+
+            ; Mode register 1
+            ;   Bit 7: Muilticast (only valid for UDP) (1 = enable, 0 = disable); set DIPR/DPORT before OPEN cmd
+            ;   Bit 6: MAC filter (only valid for MACRAW) (1 = normal, 0 = capture all packets)
+            ;   Bit 5: TCP mode: No delayed ack (1 = no delayed ack [default], 0 = wait for RTR time always)
+            ;          UDP+MULTI: IGMP version (0 = v2, 1 = v1)
+            ;   Bit 4: reserved (0)
+            ;   Bit 0-3: Protocol
+            MR1         = BASE + 1
+
+            .scope MR1
+                MULTI   = 7
+                MF      = 6
+                ND      = 5
+                IGMPv   = 5
+            .endscope ; MR1
+
+            .scope PROT
+                CLOSE   = %0000
+                TCP     = %0001
+                UDP     = %0010
+                IPRAW   = %0011
+                MACRAW  = %0100
+                PPPoE   = %0101
+            .endscope ; PROT
+
+            ; Command register
+            CR          = BASE + 3
+            .scope CMD
+                ; Open the socket; the protocol should be set first in MR1
+                ;   In TCP mode, SSR <- INIT
+                ;   In UDP mode, SSR <- UDP
+                ;   In IPRAW mode, SSR <- IPRAW
+                ;   In MACRAW mode, SSR <- MACRAW
+                ;   In PPPoE mode, SSR <- PPPoE
+                OPEN        = $01
+                ; Listen for incoming connection (only valid in TCP mode)
+                LISTEN      = $02
+                ; Initiate an outbound connection (TCP only)
+                ;   On completion, SOCK::IR(0) <- 1 and SSR <- ESTABLISHED
+                ;   On fail, SSR <- CLOSED
+                CONNECT     = $04
+                ; Disconnect a TCP socket
+                ;   Active close: send FIN
+                ;   Passive close: send FIN when FIN is received
+                ;   On completion (FIN/ACK received), SSR <- CLOSED
+                ;   On failure, IR(3) <- 1 and SSR <- CLOSED
+                DISCON      = $08
+                ; Close a TCP socket (does not send FIN)
+                ;   SSR <- CLOSED
+                CLOSE       = $10
+                ; Send a packet of TX::WRSR size (must be written to TX::FIFOR first)
+                ;   In TCP/UDP, if WRSR > MSS, packet is divided; not in IPRAW/MACRAW.
+                ;   On completion (ACK received):
+                ;       IR(4) <- 1 (once this is set, host can send again; 0 means wait)
+                ;       TX::FSR <- FSR + size
+                ;   On failure (timeout):
+                ;       IR(3) <- 1 (timeout)
+                ;       SSR <- CLOSED
+                SEND        = $20
+                ; Send a packet directly to DHAR address (UDP or IPRAW only) (skips ARP)
+                SEND_MAC    = $21
+                ; Send a keep-alive packet to the peer; only send after >= 1 comm is processed
+                ;   Only available if SOCK::KPALVTR = 0 (else it's automatic)
+                ;   On completion (KA/ACK received):
+                ;       SSR maintains ESTABLISHED
+                ;   On failure (timeout):
+                ;       IR(3) <- 1 (timeout)
+                ;       SSR <- CLOSED
+                SEND_KEEP   = $22
+                ; Acknowledge receipt of a packet (host should read from RX::FIFOR first)
+                RECV        = $40
+                ;
+                ; PPPoE-specific commands (SOCKET0 only, PROT::PPPoE only)
+                ;
+                PCON        = $23
+                PDISCON     = $24
+                PCR         = $25
+                PCN         = $26
+                PCJ         = $27
+            .endscope ; CMD
+
+            ; Interrupt mode register; set each bit to 1 to enable the interrupt for this socket
+            ; Use IR::* constants
+            ;   Bit 7: PPPoE receive
+            ;   Bit 6: PPPoE fail
+            ;   Bit 5: PPPoE next
+            ;   Bit 4: Send OK
+            ;   Bit 3: Timeout
+            ;   Bit 2: Receive data
+            ;   Bit 1: Disconnect
+            ;   Bit 0: Connect
+            IMR         = BASE + 5
+
+            ; Interrupt register; write 1 to clear bit, read 1 if condition is set
+            ; If all bits are cleared, REG::IR(n) is cleared automatically
+            ;   Bit 7: PPPoE receive
+            ;   Bit 6: PPPoE fail
+            ;   Bit 5: PPPoE next
+            ;   Bit 4: Send OK (command is completed)
+            ;   Bit 3: Timeout (ARP or TCP timed out)
+            ;   Bit 2: Receive data
+            ;   Bit 1: Disconnect (FIN or FIN/ACK received)
+            ;   Bit 0: Connect (connection established)
+            IR          = BASE + 7
+
+            .scope IR
+                PRECV   = 7
+                PFAIL   = 6
+                PNEXT   = 5
+                SENDOK  = 4
+                TIMEOUT = 3
+                RECV    = 2
+                DISCON  = 1
+                CON     = 0
+            .endscope ; IR
+
+            ; Socket status register
+            SSR         = BASE + 9
+
+            .scope SSR
+                ; Released/available socket
+                ;   next cmd: OPEN
+                CLOSED      = 0
+                ; Open in TCP mode but not connected
+                ;   next cmd: LISTEN, CONNECT, CLOSE
+                INIT        = $13
+                ; Open for listen
+                ;   next cmd: CLOSE
+                LISTEN      = $14
+                ; Connection established
+                ;   next cmd: SEND, RECV, CLOSE, DISCON (active close)
+                ESTABLISHED = $15
+                ; FIN received but connection still established
+                ;   next cmd: SEND, RECV, CLOSE, DISCON (passive close)
+                CLOSE_WAIT  = $1C
+                ; Socket in UDP mode
+                UDP         = $22
+                ; Socket in IP Raw mode
+                IPRAW       = $32
+                ; Socket in MAC Raw mode
+                MACRAW      = $42
+                ; Socket in PPPoE mode
+                PPPoE       = $5F
+                ;; temp statuses
+                SYN_SENT    = $15
+                SYN_RECV    = $16
+                FIN_WAIT    = $18
+                TIME_WAIT   = $1B
+                LAST_ACK    = $1D
+                ARP         = $01
+            .endscope ; SSR
+
+            ; Source port register; network order, 2 bytes (TCP/UDP only)
+            PORTR       = BASE + $0A
+            PORTR_LEN   = 2
+
+            ; Destination hardware (MAC) address; network order, 6 bytes
+            ;   initialized by ARP
+            DHAR        = BASE + $0C
+            DHAR_LEN    = 6
+
+            ; Destination port; network order, 2 bytes (TCP/UDP only)
+            DPORTR      = BASE + $12
+            DPORTR_LEN  = 2
+
+            ; Destination IP address; network order, 4 bytes
+            DIPR        = BASE + $14
+            DIPR_LEN    = 4
+
+            ; MSS register (TCP/UDP only); network order, 2 bytes
+            MSSR        = BASE + $18
+            MSSR_LEN    = 2
+
+            ; Keep-alive timer (TCP only); 1 byte, 5 second increments
+            KPALVTR     = BASE + $1A
+
+            ; Protocol number register (IPRAW only); 1 byte
+            PROTOR      = BASE + $1B
+
+            ; IP TOS register (set before OPEN for TCP); 1 byte
+            TOSR        = BASE + $1D
+
+            ; IP TTL register (set before OPEN for TCP); 1 byte
+            TTLR        = BASE + $1E
+
+            ; Fragment field of IP header (set before OPEN for TCP); 1 byte
+            ; !! do not configure !!
+            FRAGR       = BASE + $2D
+
+            .scope TX
+                ; Transmit write size register (1 bit + 2 bytes, MSb first then MSB/LSB)
+                WRSR        = BASE + $21
+                WRSR_LEN    = 3
+
+                ; Free size register (read-only) (1 bit + 2 bytes, MSb first then MSB/LSB)
+                FSR         = BASE + $25
+                FSR_LEN     = 3
+
+                ; FIFO register (normally write-only); write even bytes to FIFOR and odd to FIFOR+1, write dummy odd byte if needed
+                FIFOR       = BASE + $2E
+                FIFOR_LEN   = 2
+            .endscope ; TX
+
+            .scope RX
+                ; Received size register (read-only) (1 bit + 2 bytes, MSb first then MSB/LSB)
+                RSR         = BASE + $28
+                RSR_LEN     = 3
+
+                ; FIFO register (normally read-only); read even bytes from FIFOR and odd from FIFOR+1, read odd byte if needed
+                FIFOR       = BASE + $30
+                FIFOR_LEN   = 2
+            .endscope ; RX
+        .endscope ; SOCK
+    .endscope ; REG
+.endscope ; W5300
+
+;;;
+;;; ROM control
+;;;
+
+.scope ROM
+
+    BANK        = $D100
+
+    .scope BANK
+
+        CIO         = BANK + 0
+        .scope CIO
+            ; first device bank
+            MIN     = BANK + 1
+            ; N: device
+            NET     = MIN + 0
+            ; R: device
+            RS232   = MIN + 1
+            ; H: device
+            CIOTCP  = MIN + 2
+
+            ; last device bank
+            MAX     = CIOTCP
+            COUNT   = MAX - MIN + 1
+        .endscope ; CIO
+
+        SIO         = BANK + 8
+        .scope SIO
+            SIOUDP  = BANK + 9
+            SIOMAP  = BANK + 10
+        .endscope ; SIO
+
+    .endscope ; BANK
+.endscope ; ROM
+
+;;;
+;;; RAM control
+;;;
+
+.scope RAM
+
+    ; fixed RAM base
+    BASE        = $D600
+    ; RAM bank select registers
+    BANK        = $D1E0
+
+    .scope BANK
+        BASE        = $D700
+        IOCB        = BANK + $00 ; one bank for each IOCB - but at offsets of 16
+        ; IOCB0     = BANK + $00
+        ; IOCB1     = BANK + $10
+        ; ...
+        ; IOCB7     = BANK + $70
+        SOCK        = BANK + $01 ; one bank for each socket
+        ; SOCK0     = BANK + $01
+        ; SOCK1     = BANK + $02
+        ; ...
+        ; SOCK7     = BANK + $08
+        SIO         = BANK + $09 ; single bank for SIO operation
+    .endscope ; BANK
+
+    ; CONFIG RAM area
+    .scope CONFIG
+        BASE        = ::RAM::BASE
+        ; IP address mode
+        ;   bit 0: Use DHCP for IP assignment
+        ;   bit 1: Use DHCP for DNS addresses (ignored if bit 0 is clear)
+        ;   bit 2-7: reserved
+        IPMODE          = BASE + $00
+        ; Configured IP address
+        IPADDR          = BASE + $01
+        IPADDR_LEN      = 4
+        ; Configured IP netmask length
+        IPADDR_BITS     = BASE + $05
+        ; Configured DNS host
+        DNS             = BASE + $06
+        DNS_LEN         = 4
+        ; Configured default router
+        IPGW            = BASE + $0A
+        IPGW_LEN        = 4
+    .endscope ; CONFIG
+
+    ; SOCK banks memory layout
+    .scope SOCK
+        BASE        = BANK::BASE
+        ; IOCB number times 16
+        IOCB        = BASE + 0
+
+        ; Socket software status
+        STAT        = BASE + 1
+
+        .scope STAT ; even values only
+            ; Socket is not open
+            CLOSED  = 0
+            ; Performing DNS lookup
+            DNS     = 2
+            ; In TCP socket mode
+            TCP     = 4
+            ; In UDP socket mode
+            UDP     = 6
+        .endscope ; STAT
+    .endscope ; SOCK
+
+    ; IOCB banks memory layout
+    .scope IOCB
+        BASE        = BASE::BANK
+
+        ; IOCB index (number times 16) (init at start)
+        IOCB_IDX    = BASE + 0
+
+        ; unused    = BASE + 1
+
+        ; Socket ID, 0-7, for this IOCB
+        SOCK        = BASE + 2
+        ; IOCB status
+        ;   0 = not open, or open by someone else
+        ;   $80 = open (by us)
+        STAT        = BASE + 3
+        ; CIO driver ROM bank index
+        CIO_BANK    = BASE + 4
+    .endscope ; IOCB
+
+
+.endscope ; RAM
+
+;;;
+;;; CIO
+;;;
+
+.scope CIO
+    .scope JMPTAB
+        BASE        = $DC00
+        OPEN        = BASE + 0
+        CLOSE       = BASE + 3
+        READ        = BASE + 6
+        WRITE       = BASE + 9
+        STATUS      = BASE + 12
+        SPECIAL     = BASE + 15
+        LAST        = SPECIAL
+        LEN         = LAST - BASE
+    .endscope ; JMPTAB
+
+    .scope N
+        .scope AUX1
+            CONC        = %00000001
+            ; unused    = %00000010
+            READ        = %00000100
+            WRITE       = %00001000
+
+
+.endscope
+
 
     ; OPEN RS232
     ;   ICAX1 values:
@@ -430,228 +897,4 @@
     ;
     .global SOCK_READ
 
-    ;;
-    ;; W5300 definitions
-    ;;
-
-    ; Bank 0: Init, common regs
-    W5300_BANK_COMMON   = W5300_BANK + $0
-
-    ; Mode Register
-    W5300_REG_MR0       = W5300_BASE + $00
-    W5300_REG_MR1       = W5300_BASE + $01
-
-    ; Interrupt Register
-    W5300_REG_IR0       = W5300_BASE + $02
-    W5300_REG_IR1       = W5300_BASE + $03
-
-    ; Interrupt Mask Register
-    W5300_REG_IMR0      = W5300_BASE + $04
-    W5300_REG_IMR1      = W5300_BASE + $05
-
-    ; Source Hardware Address Register
-    W5300_REG_SHAR      = W5300_BASE + $08
-    W5300_REG_SHAR0     = W5300_REG_SHAR + 0
-    W5300_REG_SHAR1     = W5300_REG_SHAR + 1
-    W5300_REG_SHAR2     = W5300_REG_SHAR + 2
-    W5300_REG_SHAR3     = W5300_REG_SHAR + 3
-    W5300_REG_SHAR4     = W5300_REG_SHAR + 4
-    W5300_REG_SHAR5     = W5300_REG_SHAR + 5
-
-    ; Gateway Address Register
-    W5300_REG_GAR       = W5300_BASE + $10
-    W5300_REG_GAR0      = W5300_REG_GAR + 0
-    W5300_REG_GAR1      = W5300_REG_GAR + 1
-    W5300_REG_GAR2      = W5300_REG_GAR + 2
-    W5300_REG_GAR3      = W5300_REG_GAR + 3
-
-    ; Subnet Mask Register
-    W5300_REG_SUBR      = W5300_BASE + $14
-    W5300_REG_SUBR0     = W5300_REG_SUBR + 0
-    W5300_REG_SUBR1     = W5300_REG_SUBR + 1
-    W5300_REG_SUBR2     = W5300_REG_SUBR + 2
-    W5300_REG_SUBR3     = W5300_REG_SUBR + 3
-
-    ; Source IP Address Register
-    W5300_REG_SIPR      = W5300_BASE + $18
-    W5300_REG_SIPR0     = W5300_REG_SIPR + 0
-    W5300_REG_SIPR1     = W5300_REG_SIPR + 1
-    W5300_REG_SIPR2     = W5300_REG_SIPR + 2
-    W5300_REG_SIPR3     = W5300_REG_SIPR + 3
-
-    ; Retransmission Timeout Register
-    W5300_REG_RTR       = W5300_BASE + $1C
-    W5300_REG_RTR0      = W5300_REG_RTR + 0
-    W5300_REG_RTR1      = W5300_REG_RTR + 1
-
-    ; Retransmission Retry-count Register
-    W5300_REG_RCR       = W5300_BASE + $1F
-
-    ; Transmit memory size register, socket 0-7
-    W5300_REG_TMSR      = W5300_BASE + $20
-    W5300_REG_TMSR0     = W5300_REG_TMSR + 0
-    W5300_REG_TMSR1     = W5300_REG_TMSR + 1
-    W5300_REG_TMSR2     = W5300_REG_TMSR + 2
-    W5300_REG_TMSR3     = W5300_REG_TMSR + 3
-    W5300_REG_TMSR4     = W5300_REG_TMSR + 4
-    W5300_REG_TMSR5     = W5300_REG_TMSR + 5
-    W5300_REG_TMSR6     = W5300_REG_TMSR + 6
-    W5300_REG_TMSR7     = W5300_REG_TMSR + 7
-
-    ; Receive Memory Size Register, socket 0-7
-    W5300_REG_RMSR      = W5300_BASE + $28
-    W5300_REG_RMSR0     = W5300_REG_RMSR + 0
-    W5300_REG_RMSR1     = W5300_REG_RMSR + 1
-    W5300_REG_RMSR2     = W5300_REG_RMSR + 2
-    W5300_REG_RMSR3     = W5300_REG_RMSR + 3
-    W5300_REG_RMSR4     = W5300_REG_RMSR + 4
-    W5300_REG_RMSR5     = W5300_REG_RMSR + 5
-    W5300_REG_RMSR6     = W5300_REG_RMSR + 6
-    W5300_REG_RMSR7     = W5300_REG_RMSR + 7
-
-    ; Memory Block Type Register
-    W5300_REG_MTYPER    = W5300_BASE + $30
-    W5300_REG_MTYPER0   = W5300_REG_MTYPER + 0
-    W5300_REG_MTYPER1   = W5300_REG_MTYPER + 1
-
-    ; PPPoE Authentication Register
-    W5300_REG_PATR      = W5300_BASE + $32
-    W5300_REG_PATR0     = W5300_REG_PATR + 0
-    W5300_REG_PATR1     = W5300_REG_PATR + 1
-
-    ; PPP LCP Request Time Register
-    W5300_REG_PTIMER    = W5300_BASE + $37
-
-    ; PPP LCP Magic Number Register
-    W5300_REG_PMAGICR   = W5300_BASE + $39
-
-    ; PPP Session ID Register
-    W5300_REG_PSIDR     = W5300_BASE + $3C
-    W5300_REG_PSIDR0    = W5300_REG_PSIDR + 0
-    W5300_REG_PSIDR1    = W5300_REG_PSIDR + 1
-
-    ; START OF BANK 1
-    W5300_BANK_PPP      = W5300_BANK + 1
-
-    ; PPP Destination Hardware Address Register
-    W5300_REG_PDHAR     = W5300_BASE + $00
-    W5300_REG_PDHAR0    = W5300_REG_PDHAR + 0
-    W5300_REG_PDHAR1    = W5300_REG_PDHAR + 1
-    W5300_REG_PDHAR2    = W5300_REG_PDHAR + 2
-    W5300_REG_PDHAR3    = W5300_REG_PDHAR + 3
-    W5300_REG_PDHAR4    = W5300_REG_PDHAR + 4
-    W5300_REG_PDHAR5    = W5300_REG_PDHAR + 5
-
-    ; Unreachable IP Address Register
-    W5300_REG_UIPR      = W5300_BASE + $08
-    W5300_REG_UIPR0     = W5300_REG_UIPR + 0
-    W5300_REG_UIPR1     = W5300_REG_UIPR + 1
-    W5300_REG_UIPR2     = W5300_REG_UIPR + 2
-    W5300_REG_UIPR3     = W5300_REG_UIPR + 3
-
-    ; Unreachable Port Number Register
-    W5300_REG_UPORTR    = W5300_BASE + $0C
-    W5300_REG_UPORTR0   = W5300_REG_UPORTR + 0
-    W5300_REG_UPORTR1   = W5300_REG_UPORTR + 1
-
-    ; Fragment MTU Register
-    W5300_REG_FMTUR     = W5300_BASE + $0E
-    W5300_REG_FMTUR0    = W5300_REG_FMTUR + 0
-    W5300_REG_FMTUR1    = W5300_REG_FMTUR + 1
-
-    ; BRDY Configure/Depth Registers (n/a)
-
-    ; START OF BANKS 4-12
-    W5300_BANK_SOCK     = W5300_BANK + $04
-
-    ; Socket Mode Register
-    W5300_REG_SOCK_MR   = W5300_BASE + $00
-    W5300_REG_SOCK_MR0  = W5300_REG_SOCK_MR + 0
-    W5300_REG_SOCK_MR1  = W5300_REG_SOCK_MR + 1
-
-    ; Socket Command Register
-    W5300_REG_SOCK_CR   = W5300_BASE + $03
-
-    ; Socket Interrupt Mask Register
-    W5300_REG_SOCK_IMR  = W5300_BASE + $05
-
-    ; Socket Interrupt Register
-    W5300_REG_SOCK_IR   = W5300_BASE + $07
-
-    ; Socket Status Register
-    W5300_REG_SOCK_SSR  = W5300_BASE + $09
-
-    ; Socket Source Port Register
-    W5300_REG_SOCK_PORTR    = W5300_BASE + $0A
-    W5300_REG_SOCK_PORTR0   = W5300_REG_SOCK_PORTR + 0
-    W5300_REG_SOCK_PORTR1   = W5300_REG_SOCK_PORTR + 1
-
-    ; Socket Destination Hardware Address Register
-    W5300_REG_SOCK_DHAR     = W5300_BASE + $0C
-    W5300_REG_SOCK_DHAR0    = W5300_REG_SOCK_DHAR + 0
-    W5300_REG_SOCK_DHAR1    = W5300_REG_SOCK_DHAR + 1
-    W5300_REG_SOCK_DHAR2    = W5300_REG_SOCK_DHAR + 2
-    W5300_REG_SOCK_DHAR3    = W5300_REG_SOCK_DHAR + 3
-    W5300_REG_SOCK_DHAR4    = W5300_REG_SOCK_DHAR + 4
-    W5300_REG_SOCK_DHAR5    = W5300_REG_SOCK_DHAR + 5
-
-    ; Socket Destination Port Register
-    W5300_REG_SOCK_DPORTR   = W5300_BASE + $12
-    W5300_REG_SOCK_DPORTR0  = W5300_REG_SOCK_DPORTR + 0
-    W5300_REG_SOCK_DPORTR1  = W5300_REG_SOCK_DPORTR + 1
-
-    ; Socket Destination IP Register
-    W5300_REG_SOCK_DIPR     = W5300_BASE + $14
-    W5300_REG_SOCK_DIPR0    = W5300_REG_SOCK_DIPR + 0
-    W5300_REG_SOCK_DIPR1    = W5300_REG_SOCK_DIPR + 1
-    W5300_REG_SOCK_DIPR2    = W5300_REG_SOCK_DIPR + 2
-    W5300_REG_SOCK_DIPR3    = W5300_REG_SOCK_DIPR + 3
-
-    ; Socket MSS Register
-    W5300_REG_SOCK_MSSR     = W5300_BASE + $18
-    W5300_REG_SOCK_MSSR0    = W5300_REG_SOCK_MSSR + 0
-    W5300_REG_SOCK_MSSR1    = W5300_REG_SOCK_MSSR + 1
-
-    ; Socket Keep-Alive Time Register
-    W5300_REG_SOCK_KPALVTR  = W5300_BASE + $1A
-
-    ; Socket Protocol Number Register
-    W5300_REG_SOCK_PROTOR   = W5300_BASE + $1B
-
-    ; Socket TOS Register
-    W5300_REG_SOCK_TOS      = W5300_BASE + $1D
-
-    ; Socket TTL Register
-    W5300_REG_SOCK_TTL      = W5300_BASE + $1F
-
-    ; Socket Tx Write Size Register
-    W5300_REG_SOCK_WRSR     = W5300_BASE + $21
-    W5300_REG_SOCK_WRSR0    = W5300_REG_SOCK_WRSR + 0
-    W5300_REG_SOCK_WRSR1    = W5300_REG_SOCK_WRSR + 1
-    W5300_REG_SOCK_WRSR2    = W5300_REG_SOCK_WRSR + 2
-
-    ; Socket Tx Free Size Register
-    W5300_REG_SOCK_FSR      = W5300_BASE + $25
-    W5300_REG_SOCK_FSR0     = W5300_REG_SOCK_FSR + 0
-    W5300_REG_SOCK_FSR1     = W5300_REG_SOCK_FSR + 1
-    W5300_REG_SOCK_FSR2     = W5300_REG_SOCK_FSR + 2
-
-    ; Socket Rx Read Size Register
-    W5300_REG_SOCK_RSR      = W5300_BASE + $29
-    W5300_REG_SOCK_RSR0     = W5300_REG_SOCK_RSR + 0
-    W5300_REG_SOCK_RSR1     = W5300_REG_SOCK_RSR + 1
-    W5300_REG_SOCK_RSR2     = W5300_REG_SOCK_RSR + 2
-
-    ; Socket Fragment Register
-    W5300_REG_SOCK_FRAGR    = W5300_BASE + $2D
-
-    ; Socket Tx FIFO Register
-    W5300_REG_SOCK_TX_FIFOR = W5300_BASE + $2E
-    W5300_REG_SOCK_TX_FIFOR0    = W5300_REG_SOCK_TX_FIFOR + 0
-    W5300_REG_SOCK_TX_FIFOR1    = W5300_REG_SOCK_TX_FIFOR + 1
-
-    ; Socket Rx FIFO Register
-    W5300_REG_SOCK_RX_FIFOR = W5300_BASE + $2E
-    W5300_REG_SOCK_RX_FIFOR0 = W5300_REG_SOCK_RX_FIFOR + 0
-    W5300_REG_SOCK_RX_FIFOR1 = W5300_REG_SOCK_RX_FIFOR + 1
 

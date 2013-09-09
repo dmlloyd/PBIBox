@@ -1,4 +1,5 @@
 
+INCFILES=$(sort $(wildcard include/*.inc))
 ASMFILES=$(sort $(wildcard src/*.asm))
 OFILES=$(ASMFILES:.asm=.obj)
 
@@ -8,7 +9,7 @@ firmware.img: $(OFILES) linker.cfg
 	@echo '     [ ld65 ] ' $< '->' $@
 	@ld65 -vm -m firmware.map -C linker.cfg --dbgfile firmware.dbg -o firmware.img $(OFILES)
 
-.asm.obj:
+.asm.obj: $(INCFILES)
 	@echo '     [ ca65 ] ' $< '->' $@
 	@ca65 -Iinclude $< -l -g -o $@
 

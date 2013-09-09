@@ -229,7 +229,7 @@ TCP_OPEN:
     clc
     adc ICBALZ
     sta ICBALZ
-    skipcc inc ICBAHZ
+    inc ICBAHZ
     ldy #0
     lda (ICBAHZ),y
     cmp #155    ; EOL?
@@ -250,7 +250,7 @@ TCP_OPEN:
     iny
     lda (ICBAHZ),y
     cmp #155    ; EOL?
-    beq
+    ; beq ????
 
 
 @just_open:

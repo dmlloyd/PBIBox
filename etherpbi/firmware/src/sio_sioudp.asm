@@ -21,22 +21,25 @@
     ;
     ; Protocol
     ;
+    ; request:
     ; Byte 0 - Message Type - $50 = COMMAND
     ; Byte 1 - Request ID
     ; Byte 2 - SIO Device ID + unit # (DDEVIC + DUNIT - 1)
     ; Byte 3 - SIO Command (DCOMND)
     ; Byte 4 - SIO Flags (DSTATS)   |W|R|0|0|0|0|0|0|  W = Send data present, R = Received data expected
     ; Byte 5 - SIO Timeout in 64 frames (DTIMLO)
-    ; Byte 6 - SIO Aux1
-    ; Byte 7 - SIO Aux2
-    ; Byte 8 - SIO Aux3 (TIMER1)
-    ; Byte 9 - SIO Aux4 (TIMER1+1)
+    ; Byte 6 - SIO Aux1 <- $030A
+    ; Byte 7 - SIO Aux2 <- $030B
+    ; Byte 8 - SIO Aux3 (TIMER1) <- $030C
+    ; Byte 9 - SIO Aux4 (TIMER1+1) <- $030D
     ; Byte 10 - Unused (0)
-    ; Byte 11 - SIO UNUSE (KMK Aux3)
+    ; Byte 11 - SIO DUNUSE (KMK Aux3) <- $0307
     ; Byte 12 - SIO Expected Reply length H (if R is set, else 0)
     ; Byte 13 - SIO Expected Reply length L (if R is set, else 0)
-    ; Byte 14+ - Data (if any)
+    ; Byte 14-15 - reserved
+    ; Byte 16+ - Data (if any)
     ;
+    ; response:
     ; Byte 0 - Message Type - $51 = COMMAND COMPLETE
     ; Byte 1 - Request ID
     ; Byte 2 - Request Status 'N' = NAK, 'C' = Complete, 'E' = Error
