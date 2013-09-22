@@ -23,13 +23,23 @@
 
 ;; Memory map:
 ;; D100-D1FF (256 bytes): I/O area
-;;    D100-D17F: Firmware ROM high bank select. 1K window, up to 128 banks.
+;;    D100-D17F: Firmware ROM high bank select. 1K window, up to 128 banks (128kB total).
 ;;    D180-D1BF: W5300 access area, 64 bytes
 ;;    D1C0-D1CF: W5300 uses 1K (10 bit) address space, mapped in 16 64-byte (6-bit) pieces.
-;;        Read/write D1C0 to select bank 0, D1C1 to select bank 1 etc.
-;;    D1D0-D1DF: SPI access registers
-;;        D1D0:
-;;    D1E0-D1FE: RAM high bank select, 256 byte window, up to 31 banks.
+;;        D1C0: select COMMON bank 0
+;;        D1C1: select COMMON bank 1
+;;        D1C2-D1C3: unused
+;;        D1C4-D1CB: select socket bank 0-7
+;;        D1CC-D1CF: unused
+;;    D1D0-D1DF: serial access and DMA registers
+;;        D1D0-7: read/write bit 0-7 [r/w] (read to stop asserting SDA)
+;;        D1D8-9: DMA address [w]
+;;        D1DA-B: DMA count [w]
+;;        D1DC: DMA write initiate [w]/DMA enabled bit [r]
+;;        D1DD: DMA read initiate [w]
+;;        D1DE: serial clock clear [w]
+;;        D1DF: serial clock set [w]
+;;    D1E0-D1FE: RAM high bank select, 256 byte window, up to 31 banks (8kB total).
 ;;    D1FF: PBI select/interrupt register
 ;; D600-D6FF (256 bytes): RAM low bank (fixed = bank 1F)
 ;; D700-D7FF (256 bytes): RAM high bank (selectable)

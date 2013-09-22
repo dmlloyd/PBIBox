@@ -21,17 +21,26 @@
 module EtherPBI(
     inout tri [15:0] SysAddr,
     input wire Phi2,
+    // 28Mhz (phi2 times 16)
+    input wire CLK1,
+    // ignored for now
+    input wire CLK2,
+    // always 1
+    output wire S0,
+    // always 0
+    output wire S1,
     output tri MPD,
     inout tri RdWr,
     output wire OE,
     output wire RamCS,
     output wire RomCS,
-    output wire [13:8] RamAddrOut,
-    output wire [15:10] RomAddrOut,
+    // Addr 0-9 on W5300; bank address 0-4 on RAM and 0-7 on ROM
+    output wire [9:0] AddrOut,
     inout tri [7:0] Data,
-    inout tri Dx,
+    input wire [2:0] ID,
     output tri IRQ,
-    output DmaReqOut,
+    output tri DmaReqOut,
+    input wire DmaAckIn,
     input wire Halt,
     input wire Reset,
     input wire SpiDI,
@@ -42,39 +51,128 @@ module EtherPBI(
     output wire DeviceRd,
     output wire DeviceCS,
     output tri EXTSEL,
-    input wire DeviceInt,
-    output wire [9:0] DeviceAddr
+    input wire DeviceInt
     );
 
-reg [13:8] RamAddr;
-reg [15:10] RomAddr;
+reg [3:0] ClkPhase;
+
+reg [2:0] DevID;
+
+reg [5:0] RamBank;
+reg [7:0] RomBank;
 reg [3:0] DeviceBank;
+
 reg [15:0] DmaAddr;
 reg [15:0] DmaCount;
+
 reg DmaReq;
 reg DmaCycle;
 reg DmaRead; /* Read from device, write to RAM if 1, Write to device, read from RAM if 0 */
 reg DmaOdd;
 reg DmaOddPickup; /* Blank read/write to align FIFO access */
+
+reg ReadWrite; /* 1 = read, 0 = write, latched */
+reg W5300Sel;  /* 1 = selected */
+reg RamSel;    /* 1 = selected */
+reg RomSel;    /* 1 = selected */
+
 reg Selected;
+
 reg SpiBit;
 reg SpiSel;
 reg SpiClkSig;
 
-reg [7:0] DataOut;
-reg [9:0] DeviceAddrOut;
+// There are three parts of the clock we care about
+// 1: Start of phase 1 (negative edge phi2) - all input data should be sampled at this time
+// 2: Phase 1 plus 35 nS - all latched or held output data should be dropped at this time
+// 8: Start of phase 2 (positive edge phi2) - addresses should be sampled at this time, and chip selects enabled
+// 15: Just before start of phase 1 (negative edge phi2) - update DmaCycle latch
 
-initial begin
-    DeviceBank = 0;
-    DmaAddr = 0;
-    DmaCount = 0;
-    DmaCycle = 0;
-    RamAddr = 0;
-    RomAddr = 0;
-    Selected = 0;
-    DmaReq = 0;
-    SpiBit = 0;
-    SpiSel = 0;
+always @(negedge CLK1) begin
+    if (Reset == 1'b0) begin
+        /* sync clock */
+        if (Phi2 == 1'b0 && ClkPhase[3] != 1'b0) begin
+            ClkPhase <= {Phi2,3'b0};
+        end
+        /* Reset! */
+        DeviceBank <= 0;
+        DmaAddr <= 0;
+        DmaCount <= 0;
+        DmaCycle <= 0;
+        RamAddr <= 0;
+        RomAddr <= 0;
+        Selected <= 0;
+        DmaReq <= 0;
+        SpiBit <= 0;
+        SpiSel <= 0;
+        DevID <= ID;
+
+    end else begin
+        /* next clock phase */
+        ClkPhase <= ClkPhase + 1;
+
+        /* test current clock phase */
+        if (ClkPhase == 4'b0000) begin
+            if (DmaCycle) begin
+                
+                if (DmaRead == 1'b0) begin
+                    if (DmaCount == 1) begin
+                        DmaCount <= 0;
+                        if (DmaOdd) begin
+                            // one dummy cycle needed
+                            DmaOdd <= 0;
+                        end else begin
+                            // last cycle
+                            DmaReq <= 0;
+                        end
+                    end else begin
+                        DmaOdd <= ! DmaOdd;
+                        DmaCount <= DmaCount - 1;
+                        DmaAddr <= DmaAddr + 1;
+                    end
+                end
+            end else if (ReadWrite == 1'b0) begin
+                // sample inputs and perform write operation
+                if (SysAddr[15:7] == 9'b110100010 && Selected) begin // First 127 bytes
+                    RomBank[7:0] <= SysAddr[7:0];
+                end else if (SysAddr[15:4] == 12'b110100011100     && Selected) begin // D1Cx
+                    DeviceBank[3:0] <= SysAddr[3:0];
+                end else if (SysAddr[15:3] == 13'b1101000111010    && Selected) begin // D1D0-7
+                    SpiBit <= Data[SysAddr[2:0]];
+                end else if (SysAddr[15:0] == 16'b1101000111010100 && Selected) begin // D1D8
+                    DmaAddr[7:0] <= Data[7:0];
+                end else if (SysAddr[15:0] == 16'b1101000111010101 && Selected) begin // D1D9
+                    DmaAddr[15:8] <= Data[7:0];
+                end else if (SysAddr[15:0] == 16'b1101000111010110 && Selected) begin // D1DA
+                    DmaCount[7:0] <= Data[7:0];
+                end else if (SysAddr[15:0] == 16'b1101000111010111 && Selected) begin // D1DB
+                    DmaCount[15:8] <= Data[7:0];
+                end else if (SysAddr[15:1] == 15'b110100011101100  && Selected) begin // D1DC-DD
+                    // Start DMA
+                    DmaReq <= 1;
+                    DmaRead <= SysAddr[0];
+                    DmaOdd <= DmaCount[0];
+                end else if (SysAddr[15:1] == 15'b110100011101101  && Selected) begin // D1DE-DF
+                    SpiClkSig <= SysAddr[0];
+                end else if (SysAddr[15:0] == 16'b1101000111111111) begin
+                    Selected <= Data == 8'b1 << DevID; // disable on conflict
+                end else if (SysAddr[15:5] == 11'b11010001111      && Selected) begin // D1E0-D1FE
+                    RamBank[4:0] <= SysAddr[4:0];
+                end
+            end                
+        end else if (ClkPhase == 4'b0001 && ReadWrite == 1'b1) begin
+            // clear holds from read operation
+            W5300Sel <= 0;
+            RamSel <= 0;
+            RomSel <= 0;
+        end else if (ClkPhase == 4'b1000) begin
+            // Sample all address info and enable read operation
+            ReadWrite <= RdWr;
+        end else if (ClkPhase == 4'b1111) begin
+            // Check if the next cycle will be a DMA cycle
+            DmaCycle <= DmaReq && DmaAckIn && Halt;
+        end
+    end      
 end
 
 always @(negedge Phi2) begin
@@ -161,72 +259,5 @@ always @(negedge Phi2) begin
         SpiClkSig <= 0;
     end
 end
-
-always
-begin
-    if ((Selected & Phi2 & RdWr) == 1'b1) begin
-        if (SysAddr[15:0] == 'hD1F7) begin
-            DataOut <= DmaAddr[7:0];
-        end else if (SysAddr[15:0] == 'hD1F8) begin
-            DataOut <= DmaAddr[15:8];
-        end else if (SysAddr[15:0] == 'hD1F9) begin
-            DataOut <= DmaCount[7:0];
-        end else if (SysAddr[15:0] == 'hD1FA) begin
-            DataOut <= DmaCount[15:8];
-        // D1FB = DMA initiate (write only)
-        end else if (SysAddr == 'hD1FC) begin
-            DataOut <= {Halt, 7'b0000000};
-        // D1FD = SPI select (write only)
-        end else if (SysAddr == 'hD1FE) begin
-            DataOut <= {7'b0000000, SpiDI};
-        end else if (SysAddr == 'hD1FF) begin
-            DataOut <= 8'bzzzzzzzz;
-        end else if (SysAddr[15:8] == 'hD1) begin
-            DataOut <= 8'b00000000;
-        end else begin
-            DataOut <= 8'bzzzzzzzz;
-        end
-    end else begin
-        DataOut <= 8'bzzzzzzzz;
-    end
-end
-
-always
-begin
-    if (DmaCycle == 1'b1) begin
-        if (DmaRead == 1'b1) begin
-            DeviceAddrOut <= {DeviceBank, 5'b10111, DmaOdd^DmaCount[0]};
-        end else begin
-            DeviceAddrOut <= {DeviceBank, 5'b11000, DmaOdd^DmaCount[0]};
-        end
-    end else begin
-        DeviceAddrOut <= {DeviceBank, SysAddr[5:0]};
-    end
-end
-
-assign SpiCK = Phi2 & (SpiClkSig | (Selected & RdWr & (SysAddr == 'hD197)));
-assign SpiCS = SpiSel;
-assign SpiDO = SpiBit;
-
-assign IRQ = DeviceInt ? 1'b0 : 1'bz;
-assign MPD = Selected ? 1'b0 : 1'bz;
-assign OE = ~(Selected & RdWr);
-assign RamAddrOut = SysAddr[8] ? RamAddr : 0;
-assign RomAddrOut = SysAddr[10] ? RomAddr : 0;
-assign DmaReqOut = DmaReq ? 1'b0 : 1'bz;
-assign EXTSEL = DmaOddPickup | Selected & (SysAddr[15:11] == ('hD800 >> 11) || SysAddr[15:9] == ('hD600 >> 9) || SysAddr[15:8] == ('hD100 >> 8)) ? 1'b0 : 1'bz;
-assign Dx = (Selected & (SysAddr == 'hD1FF) & RdWr) ? ~DeviceInt : 1'bz;
-assign RomCS = ~(Selected & Phi2 & (SysAddr[15:11] == ('hD800 >> 11)));
-assign RamCS = ~(Selected & Phi2 & (SysAddr[15:9] == ('hD600 >> 9)));
-
-/* HALT and SPI read registers */
-assign Data[7:0] = DataOut[7:0];
-
-assign DeviceAddr = DeviceAddrOut;
-assign SysAddr = DmaCycle ? DmaAddr : 16'bz;
-assign DeviceWr = ~(DmaCycle ? ~DmaRead : ~DeviceCS & ~RdWr);
-assign DeviceRd = ~(DmaCycle ?  DmaRead : ~DeviceCS &  RdWr);
-assign DeviceCS = ~(Phi2 & (DmaCycle | Selected & (SysAddr[15:6] == ('hD180 >> 6))));
-assign RdWr = DmaCycle ? DmaRead : 1'bz;
 
 endmodule
